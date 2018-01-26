@@ -153,7 +153,7 @@ public:
      * \param wheel_base   whell base [m]
      * \param wheel_radius     Wheel radius [m]
      */
-    void setWheelParams(double wheel_base, double wheel_radius);
+    void setWheelParams(double wheel_base, double wheel_radius, double multiplier_right_curve);
 
     /**
      * \brief Velocity rolling window size setter
@@ -200,6 +200,7 @@ private:
     /// Wheel kinematic parameters [m]:
     double wheel_base_;
     double wheel_radius_;
+    double multiplier_right_curve_;
 
     /// Previou wheel position/state [rad]:
     double front_wheel_old_pos_;

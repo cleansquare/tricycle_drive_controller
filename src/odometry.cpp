@@ -56,6 +56,7 @@ Odometry::Odometry(size_t velocity_rolling_window_size)
     , angular_(0.0)
     , wheel_base_(0.0)
     , wheel_radius_(0.0)
+    , multiplier_right_curve_(1.0)
     , front_wheel_old_pos_(0.0)
     , velocity_rolling_window_size_(velocity_rolling_window_size)
     , linear_acc_(RollingWindow::window_size = velocity_rolling_window_size)
@@ -134,9 +135,16 @@ Odometry::updateOpenLoop(double linear, double angular, const ros::Time& time)
 bool
 Odometry::updateFromHWEncoders(double front_wheel_velocity, double front_wheel_angle, const ros::Time& time)
 {
+
+    double angle = front_wheel_angle;
+    // temporary hack, needs proper math!!
+    if (front_wheel_angle < 0 ) {
+      angle = angle * multiplier_right_curve_;
+    }
+
     /// Compute linear and angular diff:
-    const double cos_phi = std::cos(front_wheel_angle);
-    const double sin_phi = std::sin(front_wheel_angle);
+    const double cos_phi = std::cos(angle);
+    const double sin_phi = std::sin(angle);
 
     const double linear = front_wheel_velocity * wheel_radius_ * cos_phi;
     const double angular = front_wheel_velocity * wheel_radius_* sin_phi / wheel_base_;
@@ -170,10 +178,11 @@ Odometry::updateFromHWEncoders(double front_wheel_velocity, double front_wheel_a
 }
 
 void
-Odometry::setWheelParams(double wheel_base, double wheel_radius)
+Odometry::setWheelParams(double wheel_base, double wheel_radius, double multiplier_right_curve)
 {
     wheel_base_ = wheel_base;
     wheel_radius_ = wheel_radius;
+    multiplier_right_curve_ = multiplier_right_curve;
 }
 
 void

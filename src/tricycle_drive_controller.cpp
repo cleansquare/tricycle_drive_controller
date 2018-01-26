@@ -114,6 +114,7 @@ TricycleDriveController::TricycleDriveController()
     , wheel_separation_multiplier_(1.0) // FIXME: not needed
     , wheel_radius_multiplier_(1.0)
     , wheel_radius_multiplier_odom_(1.0)
+    , multiplier_right_curve_(1.0)
     , ackermann_cmd_timeout_(0.5)
     , base_frame_id_("base_link")
     , enable_odom_tf_(true)
@@ -181,6 +182,9 @@ TricycleDriveController::init(hardware_interface::RobotHW* hw, ros::NodeHandle& 
     controller_nh.param("wheel_radius_multiplier_odom", wheel_radius_multiplier_odom_, wheel_radius_multiplier_odom_);
     ROS_INFO_STREAM_NAMED(name_, "Wheel radius will be multiplied by " << wheel_radius_multiplier_odom_ << ".");
 
+    controller_nh.param("multiplier_right_curve", multiplier_right_curve_, multiplier_right_curve_);
+    ROS_INFO_STREAM_NAMED(name_, "Multiplier for right curve will be " << multiplier_right_curve_ << ".");
+
     int velocity_rolling_window_size = 10;
     controller_nh.param("velocity_rolling_window_size", velocity_rolling_window_size, velocity_rolling_window_size);
     ROS_INFO_STREAM_NAMED(name_, "Velocity rolling window size of " << velocity_rolling_window_size << ".");
@@ -233,7 +237,7 @@ TricycleDriveController::init(hardware_interface::RobotHW* hw, ros::NodeHandle& 
 
     // Regardless of how we got radius, use it to set the odometry parameters
     const double wr = wheel_radius_multiplier_odom_ * wheel_radius_;
-    odometry_.setWheelParams(wheel_base_, wr);
+    odometry_.setWheelParams(wheel_base_, wr, multiplier_right_curve_);
 
     ROS_INFO_STREAM_NAMED(name_, "Odometry params : wheel radius " << wr << ", wheel base " << wheel_base_);
 
@@ -388,6 +392,12 @@ TricycleDriveController::cmdVelCallback(const geometry_msgs::Twist& command)
 		radius = boost::math::copysign(radius,command.angular.z);
 
     	    command_struct_.angle = std::atan(wheel_base_ / radius);
+
+          // temporary hack, needs proper math!!
+          if (command.angular.z < 0) {
+            command_struct_.angle = command_struct_.angle * multiplier_right_curve_;
+          }
+
     	    if(std::fabs(command_struct_.angle)>1.55){
                 command_struct_.speed = boost::math::copysign(wheel_base_ * command.angular.z,command.linear.x);
 
@@ -399,7 +409,7 @@ TricycleDriveController::cmdVelCallback(const geometry_msgs::Twist& command)
     	}
 
     if (command_struct_.speed < 0) {
-	command_struct_.angle = -command_struct_.angle;
+	     command_struct_.angle = -command_struct_.angle;
     }
 
         command_struct_.stamp = ros::Time::now();
